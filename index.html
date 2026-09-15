@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1522">
+<title>深度资讯</title>
+<style>
+  :root{
+    --bg:#0f1522; --card:#161d2d; --text:#e8ecf4; --muted:#8b94a8;
+    --accent:#7c74ff; --accent2:#2dd4bf; --danger:#ff5c7a; --ok:#2ecc8f;
+    --border:#26304a; --soft:#1d2740; --radius:16px; --shadow:0 4px 18px rgba(0,0,0,.35);
+    --safe:env(safe-area-inset-bottom);
+    --up:#ff6b5e; --down:#26c281; --neutral:#7d8798; --gold:#f0a824;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--text); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input{font-family:inherit;font-size:16px;color:var(--text);caret-color:var(--accent)}
+  input::placeholder{color:var(--muted)}
+  .icon{width:22px;height:22px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+  .app{display:flex;min-height:100vh}
+  .side{display:none}
+  .main{flex:1;display:flex;flex-direction:column;max-width:760px;margin:0 auto;width:100%;position:relative}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(15,21,34,.88);
+    backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--border);
+    padding:calc(env(safe-area-inset-top) + 7px) 14px 7px;}
+  .h-top{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{font-weight:800;font-size:16px;letter-spacing:.5px;display:flex;align-items:center;gap:8px;flex:none}
+  .logo .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+  .h-actions{margin-left:0;display:flex;gap:4px;flex:none}
+  .h-btn{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--muted)}
+  .h-btn .icon{width:19px;height:19px}
+  .h-btn:active{background:var(--soft)}
+  .strip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:10px 16px 0}
+  .strip .led{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+  .strip-upd{margin-left:auto;color:var(--muted)}
+  .strip.off{position:fixed;left:0;right:0;bottom:0;z-index:55;gap:8px;color:#ffb0b0;
+    background:#3a1622;border-top:1px solid #5e2434;font-weight:600;
+    padding:11px 16px calc(11px + env(safe-area-inset-bottom))}
+  .strip.off .led{background:var(--danger)}
+  .strip.off .strip-upd{display:none}
+
+  /* 模块切换（工作台级分段控件，并入顶栏单行） */
+  .switch{display:flex;gap:2px;margin-left:auto;flex:none;background:var(--soft);
+    border:1px solid var(--border);border-radius:11px;padding:3px}
+  .switch button{padding:6px 11px;border-radius:8px;border:none;
+    background:transparent;color:var(--muted);font-size:13px;font-weight:700}
+  .switch button.on{background:var(--accent);color:#fff}
+  .switch button:not(.on):active{background:#253052}
+  @media(max-width:379px){
+    .logo{font-size:14px}
+    .switch button{padding:6px 8px;font-size:12px}
+  }
+
+  .ptr{height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+  .ptr .spin{width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%}
+  .ptr.busy .spin{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* 共享每日一言 */
+  .today{margin:12px 14px 0;background:linear-gradient(135deg,#1c2540,#14282e);border:1px solid #2a3556;border-radius:var(--radius);padding:14px 16px}
+  .today h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--accent)}
+  .q-text{font-size:18px;font-weight:600;line-height:1.7;color:var(--text);margin:6px 2px 6px}
+  .q-author{font-size:13px;color:var(--muted);text-align:right;margin-top:4px}
+
+  .mod{display:none;flex:1;overflow-y:auto;padding:6px 14px 28px;-webkit-overflow-scrolling:touch}
+  .mod.on{display:block}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 15px;margin:10px 0;box-shadow:var(--shadow);transition:transform .12s}
+  .card:active{transform:scale(.992)}
+  .c-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .c-type{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+  .t-deep{background:#2a1e4d;color:#c9a8ff}
+  .t-news{background:#1d2740;color:var(--accent)}
+  .grp-head{display:flex;align-items:center;gap:8px;margin:20px 4px 6px;font-size:15px;font-weight:800;color:var(--accent)}
+  .grp-head:first-child{margin-top:6px}
+  .grp-n{font-size:12px;font-weight:600;color:var(--muted);background:var(--soft);border-radius:10px;padding:1px 8px}
+  .c-src{font-size:12px;color:var(--muted)}
+  .c-date{margin-left:auto;font-size:12px;color:var(--muted)}
+  .c-title{font-size:16px;font-weight:700;margin:2px 0 6px;line-height:1.45}
+  .c-sum{font-size:14px;color:#a9b3c6;line-height:1.55}
+  .c-insight{margin-top:10px;padding:9px 12px;border-left:3px solid #4f46e5;background:rgba(79,70,229,.09);border-radius:0 8px 8px 0;font-size:13px;line-height:1.6;color:#c3cae0}
+  .c-insight b{color:#8b93ff;font-weight:700}
+  .c-case{margin-top:8px;padding:8px 11px;background:rgba(45,212,191,.05);border:1px solid rgba(45,212,191,.22);border-radius:10px;font-size:13px;line-height:1.6;color:#c3cae0}
+  .c-case b{color:#2dd4bf;font-weight:700}
+  .c-case .src{display:block;margin-top:3px;font-size:11.5px;color:#7f95a0}
+  .c-method{margin-top:10px;padding:10px 12px;border-left:3px solid #2dd4bf;background:rgba(45,212,191,.07);border-radius:0 8px 8px 0;font-size:13px;line-height:1.65;color:#c9d4d8}
+  .c-method b{color:#2dd4bf;font-weight:700}
+  .c-foot{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .c-tag{font-size:12px;padding:3px 9px;border-radius:14px;background:var(--soft);color:#9aa5b8}
+  .c-act{margin-left:auto;display:flex;gap:6px}
+  .act{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--muted);background:var(--soft)}
+  .act.on{color:var(--accent)}
+  .read-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);display:inline-block}
+  .c-cat{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+  .cc-macro{background:rgba(59,130,246,.16);color:#7ab0ff}
+  .cc-mind{background:rgba(167,139,250,.16);color:#b79bff}
+  .cc-invest{background:rgba(234,179,8,.16);color:#ffd35c}
+  .cc-life{background:rgba(244,114,182,.16);color:#ff9ecb}
+  .cc-edu{background:rgba(45,212,191,.16);color:#5eead4}
+  .cc-tech{background:rgba(99,102,241,.18);color:#9aa6ff}
+  .cc-biz{background:rgba(249,115,22,.16);color:#ffa35c}
+  .cc-geo{background:rgba(239,68,68,.16);color:#ff8a8a}
+  .cc-society{background:rgba(20,184,166,.16);color:#5ce8d8}
+  .cc-science{background:rgba(139,92,246,.16);color:#b7a3ff}
+  .cc-culture{background:rgba(180,130,80,.2);color:#d8b088}
+  .cc-psyche{background:rgba(219,39,119,.16);color:#ff85b3}
+  .cc-career{background:rgba(6,182,212,.16);color:#67e0f4}
+  .cc-law{background:rgba(100,116,139,.2);color:#a8b6cc}
+  .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .row{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--border)}
+  .row:first-child{border-top:none}
+  .row label{flex:1;font-size:14px}
+  .row input[type=text]{flex:1;height:42px;border:1px solid var(--border);border-radius:10px;padding:0 10px;background:var(--soft);min-width:0}
+  .btn{height:44px;padding:0 16px;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .gauge{display:flex;align-items:center;gap:16px}
+  .legend{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1f2430;color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;opacity:0;transition:.25s;z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .mask{position:fixed;inset:0;background:rgba(20,24,40,.4);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+  .mask.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;right:0;top:0;bottom:0;width:min(360px,88vw);background:var(--bg);z-index:50;transform:translateX(100%);transition:.25s;overflow-y:auto;padding:18px 16px calc(20px + var(--safe))}
+  .drawer.show{transform:none}
+  .drawer h2{margin:6px 0 14px;font-size:18px;display:flex;align-items:center;gap:8px}
+  .drawer .close{position:absolute;right:14px;top:16px;width:40px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:10px}
+  .drawer .close:active{background:var(--soft)}
+
+  /* ===== 财经简报模块样式（工作台风格） ===== */
+  .fin-actions{display:flex;gap:7px;margin:12px 2px 0}
+  .fin-act{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;
+    background:var(--card);border:1px solid var(--border);color:var(--muted);font-size:12.5px;font-weight:700}
+  .fin-act:active{background:var(--soft)}
+  .mkt{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:10px 0 4px;overflow:hidden}
+  .mkt-grp{border-top:1px solid var(--border)}
+  .mkt-grp:first-child{border-top:none}
+  .mkt-hd{display:flex;align-items:center;gap:7px;padding:11px 12px;cursor:pointer}
+  .mkt-hd .bar{width:3px;height:14px;border-radius:2px;flex:none}
+  .mkt-hd .t{font-size:13.5px;font-weight:800;color:var(--text);letter-spacing:.5px}
+  .mkt-hd .ar{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+    transform:rotate(-45deg);transition:transform .2s ease;margin-left:auto;flex:none}
+  .mkt-grp.open .mkt-hd .ar{transform:rotate(45deg)}
+  .mkt-bd{display:none;padding:0 0 10px}
+  .mkt-grp.open .mkt-bd{display:block}
+  .mkt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:9px 12px}
+  .mkt-grid.cols2{grid-template-columns:repeat(2,1fr)}
+  .mkt-card{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+  .mkt-card .nm{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mkt-card .vl{font-weight:700;font-size:14.5px;color:var(--text);line-height:1.15;white-space:nowrap}
+  .mkt-card .ch{font-weight:600;font-size:11.5px;display:flex;align-items:center;gap:2px;white-space:nowrap}
+  .fin-sec{padding:14px 0 2px}
+  .fin-sec-h{display:flex;align-items:center;gap:7px;padding:0 4px 8px}
+  .fin-sec-h .bar{width:3px;height:14px;border-radius:2px;background:var(--gold)}
+  .fin-sec-h.op .bar{background:var(--ok)}
+  .fin-sec-h.rk .bar{background:var(--danger)}
+  .fin-sec-h .t{font-size:13.5px;font-weight:800;color:var(--text);letter-spacing:.5px}
+  .fin-sec-h .cnt{font-size:11px;font-weight:700;color:#fff;background:var(--accent);
+    padding:0 7px;border-radius:9px;line-height:18px}
+  .fin-sec-h.op .cnt{background:var(--ok)} .fin-sec-h.rk .cnt{background:var(--danger)}
+  .fin-sec-h{cursor:pointer;user-select:none}
+  .fin-sec-h .ar{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+    transform:rotate(45deg);transition:transform .2s ease;margin-left:auto;flex:none}
+  .fin-sec.collapsed .fin-sec-h .ar{transform:rotate(-45deg)}
+  .fin-sec.collapsed #finLead,
+  .fin-sec.collapsed #finOppo,
+  .fin-sec.collapsed #finRisk{display:none}
+  .fin-lead{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .lead-item{position:relative;padding:10px 12px 10px 34px;border-top:1px solid var(--border);background:var(--card)}
+  .lead-item:first-child{border-top:none}
+  .lead-item .rk{position:absolute;left:11px;top:11px;width:18px;height:18px;border-radius:50%;
+    background:linear-gradient(135deg,#f6c560,#f0a824);color:#3d2a00;font-size:11px;font-weight:800;
+    display:flex;align-items:center;justify-content:center}
+  .lead-item .row1{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+  .lead-item .cat{font-size:10.5px;font-weight:700;color:#9db4ff;background:#232f55;padding:1px 6px;border-radius:5px}
+  .lead-item .stars{display:inline-flex;gap:1px}
+  .st{width:12px;height:12px;display:block}
+  .lead-item h3{margin:0 0 3px;font-size:14.5px;font-weight:700;line-height:1.42;color:var(--text)}
+  .lead-item p{margin:0;font-size:12.5px;color:#a9b3c6;line-height:1.55}
+  .fin-advice{position:relative;padding:10px 12px;border-top:1px solid var(--border);background:var(--card)}
+  .fin-advice:first-child{border-top:none}
+  .fin-advice.oppo{box-shadow:inset 3px 0 0 var(--ok)}
+  .fin-advice.risk{box-shadow:inset 3px 0 0 var(--danger)}
+  .fin-advice .row1{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+  .fin-advice .tag{font-size:10px;font-weight:800;padding:1px 7px;border-radius:5px;flex:none}
+  .fin-advice.oppo .tag{background:#123524;color:#2ecc8f}
+  .fin-advice.risk .tag{background:#3a1620;color:#ff5c7a}
+  .fin-advice h3{margin:0 0 3px;font-size:14px;font-weight:700;line-height:1.42;color:var(--text)}
+  .fin-advice p{margin:0 0 6px;font-size:12.5px;color:#a9b3c6;line-height:1.55}
+  .fin-advice .kw{display:flex;flex-wrap:wrap;gap:5px}
+  .fin-advice .meta{font-size:11px;color:var(--muted);margin-top:5px}
+  .fin-feed{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .fin-item{background:var(--card);padding:10px 12px;border-top:1px solid var(--border)}
+  .fin-item:first-child{border-top:none}
+  .fin-item .row1{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+  .fin-item .cat{font-size:10.5px;font-weight:700;color:#9db4ff;background:#232f55;padding:1px 6px;border-radius:5px;flex:none}
+  .fin-item .stars{display:inline-flex;gap:1px;flex:none;margin-left:auto}
+  .fin-item h3{margin:1px 0 4px;font-size:14.5px;font-weight:700;line-height:1.42;color:var(--text)}
+  .fin-item p{margin:0 0 7px;font-size:13px;color:#a9b3c6;line-height:1.55}
+  .fin-item .kw{display:flex;flex-wrap:wrap;gap:5px}
+  .fin-item .meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-top:6px}
+  .fin-item .meta .src{font-weight:600;color:#8fa0bb}
+  .fin-chip{font-size:10.5px;padding:1px 7px;border-radius:10px;background:var(--soft);color:#9aa5b8}
+  .fin-chip.s-up{background:#3a1620;color:#ff6b5e;font-weight:700}
+  .fin-chip.s-down{background:#123524;color:#26c281;font-weight:700}
+  .fin-chip.s-flat{background:#1d2740;color:var(--neutral);font-weight:700}
+  .fin-note{font-size:11px;color:var(--muted);padding:2px 4px 0}
+  #mod-fin.comfy .fin-item{padding:12px 14px}
+  #mod-fin.comfy .fin-item p{font-size:13.5px}
+  #mod-fin.comfy .lead-item{padding:12px 14px 12px 38px}
+  #mod-fin.comfy .fin-advice{padding:12px 14px}
+
+  @media(min-width:880px){
+    .side{display:flex;flex-direction:column;width:230px;background:var(--card);border-right:1px solid var(--border);padding:22px 14px;position:sticky;top:0;height:100vh}
+    .side .logo{font-size:19px;margin-bottom:6px;padding-left:6px}
+    .side .s-sub{font-size:12px;color:var(--muted);padding:0 8px 14px;line-height:1.6}
+    .side .s-upd{color:var(--accent)}
+    .side .s-foot{margin-top:auto;padding:10px 8px 0;font-size:11px;color:var(--muted)}
+    header{position:static}
+    .mod{min-height:60vh}
+    .today,.mod{margin-left:22px;margin-right:22px}
+  }
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><span class="dot"></span>深度资讯</div>
+    <div class="s-sub">认知差 · 信息差 · 财经盘面，一个入口每日更新<span class="s-upd" id="updateTime"></span></div>
+    <div class="s-foot">数据本地存储 · 下拉刷新获取最新</div>
+  </aside>
+
+  <div class="main">
+    <header>
+      <div class="h-top">
+        <div class="logo"><span class="dot"></span><span>深度资讯</span></div>
+        <div class="switch">
+          <button data-m="cog" class="on">认知简讯</button>
+          <button data-m="fin">财经简报</button>
+        </div>
+        <div class="h-actions">
+          <button class="h-btn" id="refreshBtn" title="刷新"><svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg></button>
+          <button class="h-btn" id="setBtn" title="设置"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 状态条：不吸顶，随内容滚动；仅离线时转为底部固定红色横幅 -->
+    <div class="strip" id="statusStrip"><span class="led"></span><span id="statusTxt">正在连接…</span><span class="strip-upd" id="updateTimeMob"></span></div>
+
+    <div class="ptr" id="ptr"><div class="spin"></div></div>
+
+    <!-- 模块 A：认知简讯（每日一言仅在此模块显示） -->
+    <div class="mod on" id="mod-cog">
+      <div id="quoteBox"></div>
+      <div class="view" id="view" style="padding:0"></div>
+    </div>
+
+    <!-- 模块 B：财经简报 -->
+    <div class="mod" id="mod-fin">
+      <div class="fin-actions">
+        <button class="fin-act" id="densBtn" title="切换密度"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg><span>密度</span></button>
+        <button class="fin-act" id="finExpBtn" title="导出 JSON 备份"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>备份</span></button>
+        <button class="fin-act" id="finImpBtn" title="导入恢复 JSON"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15V3m0 0 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>导入</span></button>
+        <input type="file" id="finFileIn" class="hidden" accept="application/json,.json">
+      </div>
+      <div class="mkt" id="finMkt"></div>
+      <section class="fin-sec">
+        <div class="fin-sec-h"><span class="bar" style="background:var(--gold)"></span><span class="t">今日头条</span><span class="cnt" id="finLeadCnt">0</span><span class="ar"></span></div>
+        <div id="finLead"></div>
+      </section>
+      <section class="fin-sec">
+        <div class="fin-sec-h op"><span class="bar"></span><span class="t">机会</span><span class="cnt" id="finOpCnt">0</span><span class="ar"></span></div>
+        <div id="finOppo"></div>
+      </section>
+      <section class="fin-sec">
+        <div class="fin-sec-h rk"><span class="bar"></span><span class="t">风险</span><span class="cnt" id="finRkCnt">0</span><span class="ar"></span></div>
+        <div id="finRisk"></div>
+      </section>
+      <p class="fin-note" id="finNote"></p>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="mask"></div>
+<div class="drawer" id="drawer">
+  <button class="close" id="drawerClose"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <h2><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg>设置与数据</h2>
+  <div class="panel">
+    <h3>认知简讯 · 数据源（服务端）</h3>
+    <div class="row"><label>数据接口 URL</label></div>
+    <input type="text" id="dataUrl" placeholder="./data.json">
+    <div class="hint">默认 <code>./data.json</code>：每日 12:00 由自动任务刷新同目录数据文件。也可填你自己的 JSON 接口（需允许跨域）。</div>
+    <div class="btn-row"><button class="btn" id="saveUrl">保存并刷新</button></div>
+  </div>
+  <div class="panel">
+    <h3>财经简报 · 数据</h3>
+    <div class="hint">读取同目录 <code>./fin.json</code>（由「财经简报」任务每日 17:00 覆盖本文件，已自动刷新）。</div>
+  </div>
+  <div class="panel" id="statPanel">
+    <h3>我的认知面板</h3>
+    <div class="gauge" id="gaugeBox"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>已读进度</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const K = { read:'wb_info_read', settings:'wb_info_settings', cache:'wb_info_cache', cacheTime:'wb_info_cache_time', finCache:'wb_fin_cache', finTime:'wb_fin_cache_time' };
+const TODAY = new Date();
+const TODAY_STR = TODAY.getFullYear()+'-'+String(TODAY.getMonth()+1).padStart(2,'0')+'-'+String(TODAY.getDate()).padStart(2,'0');
+
+/* ===== 真实名言库（按当年第几天确定性轮换） ===== */
+const QUOTES = [
+  {text:"知人者智，自知者明。",author:"老子",source:"《道德经》"},
+  {text:"千里之行，始于足下。",author:"老子",source:"《道德经》"},
+  {text:"祸兮福之所倚，福兮祸之所伏。",author:"老子",source:"《道德经》"},
+  {text:"学而不思则罔，思而不学则殆。",author:"孔子",source:"《论语》"},
+  {text:"温故而知新，可以为师矣。",author:"孔子",source:"《论语》"},
+  {text:"吾日三省吾身：为人谋而不忠乎？与朋友交而不信乎？传不习乎？",author:"孔子",source:"《论语》"},
+  {text:"不积跬步，无以至千里；不积小流，无以成江海。",author:"荀子",source:"《劝学》"},
+  {text:"锲而不舍，金石可镂。",author:"荀子",source:"《劝学》"},
+  {text:"知己知彼，百战不殆。",author:"孙武",source:"《孙子兵法》"},
+  {text:"非淡泊无以明志，非宁静无以致远。",author:"诸葛亮",source:"《诫子书》"},
+  {text:"博观而约取，厚积而薄发。",author:"苏轼",source:"《稼说》"},
+  {text:"旧书不厌百回读，熟读深思子自知。",author:"苏轼",source:"《送安惇秀才误归临川》"},
+  {text:"知行合一。",author:"王阳明",source:"《传习录》"},
+  {text:"破山中贼易，破心中贼难。",author:"王阳明",source:"《与杨仕德薛尚谦书》"},
+  {text:"读书不二：一书未点完，断不看他书。",author:"曾国藩",source:"《曾国藩家书》"},
+  {text:"天下事，在局外呐喊议论，总是无益；必须躬身入局。",author:"曾国藩",source:"《挺经》"},
+  {text:"大胆地假设，小心地求证。",author:"胡适",source:"《清代学者的治学方法》"},
+  {text:"其实地上本没有路，走的人多了，也便成了路。",author:"鲁迅",source:"《故乡》"},
+  {text:"保天下者，匹夫之贱与有责焉耳矣。",author:"顾炎武",source:"《日知录》"},
+  {text:"不入虎穴，焉得虎子。",author:"范晔",source:"《后汉书》"},
+  {text:"未经审视的人生不值得过。",author:"苏格拉底",source:"柏拉图《申辩篇》"},
+  {text:"我们重复做的事，决定了我们是怎样的人；优秀因此不是一种行为，而是一种习惯。",author:"亚里士多德",source:"《尼各马可伦理学》"},
+  {text:"我思故我在。",author:"笛卡尔",source:"《方法论》"},
+  {text:"知识就是力量。",author:"培根",source:"《新工具》"},
+  {text:"如果我看得比别人更远，那是因为我站在巨人的肩膀上。",author:"牛顿",source:"《牛顿书信集》"},
+  {text:"自然界中没有跳跃。",author:"达尔文",source:"《物种起源》"},
+  {text:"想象力比知识更重要，因为知识是有限的，而想象力概括着世界的一切。",author:"爱因斯坦",source:"《星期六晚邮报》访谈"},
+  {text:"我们不能用制造问题时的同一套思维，去解决这些问题。",author:"爱因斯坦",source:"《纪念甘地》书信"},
+  {text:"那些杀不死我的，使我更强大。",author:"尼采",source:"《偶像的黄昏》"},
+  {text:"一个人知道自己为什么而活，就可以忍受任何一种生活。",author:"尼采",source:"《偶像的黄昏》"},
+  {text:"人生如同钟摆，在痛苦与无聊之间摆动。",author:"叔本华",source:"《悲观论集卷》"},
+  {text:"市场保持非理性的时间，可能长过你保持偿付能力的时间。",author:"凯恩斯",source:"《就业、利息和货币通论》"},
+  {text:"困难不在于接受新观念，而在于摆脱旧观念。",author:"凯恩斯",source:"《劝说集》"},
+  {text:"一个理论之所以科学，不在于它被证实，而在于它能被证伪。",author:"波普尔",source:"《科学发现的逻辑》"},
+  {text:"市场短期是投票机，长期是称重机。",author:"格雷厄姆",source:"《聪明的投资者》"},
+  {text:"价格是你付出的，价值是你得到的。",author:"巴菲特",source:"《巴菲特致股东的信》"},
+  {text:"风险来自你不知道自己在做什么。",author:"巴菲特",source:"《巴菲特致股东的信》"},
+  {text:"当潮水退去，才知道谁在裸泳。",author:"巴菲特",source:"伯克希尔股东大会"},
+  {text:"别人贪婪时我恐惧，别人恐惧时我贪婪。",author:"巴菲特",source:"《巴菲特致股东的信》"},
+  {text:"反过来想，总是反过来想。",author:"芒格",source:"《穷查理宝典》"},
+  {text:"我这辈子遇到的聪明人，没有不每天阅读的。",author:"芒格",source:"《穷查理宝典》"},
+  {text:"得到一样东西最好的方式，是让自己配得上它。",author:"芒格",source:"《穷查理宝典》"},
+  {text:"别在草堆里找针，买下整座草堆。",author:"约翰·博格",source:"《常识投资》"},
+  {text:"无法预测的事，恰恰最影响未来；承认不确定性，才是最好的风控。",author:"霍华德·马克斯",source:"《投资最重要的事》"},
+  {text:"痛苦 + 反思 = 进步。",author:"达利欧",source:"《原则》"},
+  {text:"投资的圣杯，是找到彼此低相关的回报流。",author:"达利欧",source:"《原则》"},
+  {text:"风会吹灭蜡烛，却能让火燃得更旺。",author:"塔勒布",source:"《反脆弱》"},
+  {text:"历史不会爬行，它是跳跃的。",author:"塔勒布",source:"《黑天鹅》"},
+  {text:"你无法预先把生命中的点滴串联起来，只有在回头看时才会明白。",author:"乔布斯",source:"斯坦福大学毕业演讲"},
+  {text:"保持饥饿，保持愚蠢。",author:"乔布斯",source:"斯坦福大学毕业演讲"},
+  {text:"我们无法做伟大的事，只能用伟大的爱做小事。",author:"特蕾莎修女",source:"《特蕾莎修女言行录》"},
+  {text:"管理得最好的企业，往往是平淡无奇的。",author:"德鲁克",source:"《管理的实践》"}
+];
+function dailyQuote(){ const start=Date.UTC(TODAY.getFullYear(),0,0); const d=Math.floor((TODAY-start)/86400000); return QUOTES[d%QUOTES.length]; }
+
+/* ===== 认知简讯示例兜底 ===== */
+const SEED = { deep:[
+  {id:'c1',type:'deep',title:'二阶思维：为什么大多数人只看到第一层结果',summary:'第一层：降价促销量。第二层：对手跟进，利润塌缩。第三层：行业出清后剩者为王。训练自己多想一层，是拉开认知差最低成本的方式。',source:'思维模型',date:'2026-08-08',tag:['认知','决策'],mins:6},
+  {id:'d1',type:'deep',title:'铜金比与信用利差：比CPI更早亮起的拐点信号灯',summary:'铜金比回落往往预示全球增长预期转弱，信用利差走阔提前反映融资环境收紧——这些「影子指标」通常在CPI与GDP正式转向下之前数周就已动作。',source:'宏观观察',date:'2026-08-08',tag:['铜金比','信用利差','先行指标'],mins:7}
+], news:[
+  {id:'f1',type:'news',title:'美联储降息路径生变：市场定价 9 月降息概率回落至 60%',summary:'最新点阵图与通胀粘性使宽松节奏后移。对久期资产与成长股估值锚产生重定价。',source:'宏观观察',date:'2026-08-08',tag:['宏观','美联储'],cat:'macro'},
+  {id:'f2',type:'news',title:'国产算力芯片良率突破：先进封装产能利用率升至 85%',summary:'CoWoS 类封装扩产超预期，国产算力从「设计可用」走向「供给可控」，产业链利润向封测环节转移。',source:'科技前沿',date:'2026-08-08',tag:['科技','半导体'],cat:'tech'}
+] };
+
+/* ===== 财经简报示例兜底 ===== */
+const SEED_FIN = { date:'—', ticker:[], news:[], opportunities:[], risks:[] };
+const CATEGORIES = [
+  {key:'macro', label:'经济·宏观'},{key:'mind', label:'认知·思维'},{key:'invest',label:'投资·理财'},
+  {key:'life', label:'人生价值'},{key:'edu', label:'儿女教育'},{key:'tech', label:'科技·AI'},
+  {key:'biz', label:'商业·公司'},{key:'geo', label:'地缘·政策'},{key:'society',label:'社会·民生'},
+  {key:'science',label:'科学·前沿'},{key:'culture',label:'文化·读书'},{key:'psyche', label:'心理·情感'},
+  {key:'career', label:'职场·成长'},{key:'law', label:'法律·合规'}
+];
+const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c=>[c.key,c.label]));
+function itemCat(it){ if(it.cat) return it.cat; for(const c of CATEGORIES){ if((it.tag||[]).some(t=>c.kw&&c.kw.includes(t))) return c.key; } return null; }
+
+/* ===== 状态 ===== */
+let COG = { data:null, online:navigator.onLine, lastFetch:0 };
+let FIN = { data:null, lastFetch:0 };
+let READ = new Set();
+let currentMod = 'cog';
+
+function load(){ try{ READ=new Set(JSON.parse(localStorage.getItem(K.read)||'[]')); }catch(e){ READ=new Set(); } }
+function saveRead(){ localStorage.setItem(K.read, JSON.stringify([...READ])); }
+function settings(){ try{ return JSON.parse(localStorage.getItem(K.settings)||'{}'); }catch(e){ return {}; } }
+function saveSettings(s){ localStorage.setItem(K.settings, JSON.stringify(s)); }
+
+/* ===== 数据源：GitHub raw 优先，同目录文件兜底（零重部署架构）===== */
+const REMOTE_BASE='https://raw.githubusercontent.com/chen6808hong/deep-news/main/';
+
+/* ===== 认知简讯数据层 ===== */
+async function fetchCog(force){
+  const st=settings();
+  const remoteUrl=(st.dataUrl&&st.dataUrl.trim())||(REMOTE_BASE+'data.json');
+  const localUrl='./data.json';
+  const cached=localStorage.getItem(K.cache), cacheTime=localStorage.getItem(K.cacheTime);
+  const seen=new Set();
+  const tryList=[remoteUrl,localUrl].filter(u=>{ if(seen.has(u)) return false; seen.add(u); return true; });
+  for(const url of tryList){
+    try{
+      const res=await fetch(url,{cache:'no-store',headers:{'Accept':'application/json'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      localStorage.setItem(K.cache,JSON.stringify(json)); localStorage.setItem(K.cacheTime,String(Date.now()));
+      COG.lastFetch=Date.now(); return {data:json,src:'live'};
+    }catch(e){}
+  }
+  if(cached){ COG.lastFetch=Number(cacheTime)||0; return {data:JSON.parse(cached),src:'cache'}; }
+  COG.lastFetch=0; return {data:SEED,src:'seed'};
+}
+
+/* ===== 财经简报数据层 ===== */
+async function fetchFin(force){
+  const st=settings();
+  const seen=new Set();
+  const tryList=[(st.finUrl&&st.finUrl.trim()),REMOTE_BASE+'fin.json','./fin.json']
+    .filter(u=>{ if(!u||seen.has(u)) return false; seen.add(u); return true; });
+  for(const url of tryList){
+    try{
+      const res=await fetch(url,{cache:'no-store',headers:{'Accept':'application/json'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      localStorage.setItem(K.finCache,JSON.stringify(json)); localStorage.setItem(K.finTime,String(Date.now()));
+      FIN.lastFetch=Date.now(); return {data:json,src:'live'};
+    }catch(e){}
+  }
+  const cached=localStorage.getItem(K.finCache);
+  if(cached){ FIN.lastFetch=Number(localStorage.getItem(K.finTime)||0); return {data:JSON.parse(cached),src:'cache'}; }
+  return {data:SEED_FIN,src:'seed'};
+}
+
+/* ===== 渲染：共享每日一言 ===== */
+function renderQuote(){
+  const q=dailyQuote();
+  document.getElementById('quoteBox').innerHTML=`<div class="today">
+    <h3><svg class="icon" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>每日一言</h3>
+    <div class="q-text">${q.text}</div>
+    <div class="q-author">— ${q.author}${q.source?(' · '+q.source):''}</div>
+  </div>`;
+}
+
+/* ===== 渲染：认知简讯 ===== */
+const view=document.getElementById('view');
+const TYPE_NAME={deep:'深读·认知差',news:'资讯·信息差'};
+const TYPE_CLS={deep:'t-deep',news:'t-news'};
+function cogItems(){ const d=COG.data||SEED; return [...(d.deep||[]),...(d.news||[])]; }
+function cogCard(it){
+  const isRead=READ.has(it.id);
+  const mins=it.mins?('<span class="meta"><span class="read-dot"></span>深度 · 约'+it.mins+'分钟</span>'):'';
+  const catKey=itemCat(it);
+  const catBadge=catKey?`<span class="c-cat cc-${catKey}">${CAT_LABEL[catKey]||catKey}</span>`:'';
+  const tags=(it.tag||[]).map(t=>'<span class="c-tag">#'+t+'</span>').join('');
+  return `<div class="card" data-id="${it.id}">
+    <div class="c-head"><span class="c-type ${TYPE_CLS[it.type]}">${TYPE_NAME[it.type]}</span>${catBadge}
+      <span class="c-src">${it.source||'未知来源'}</span><span class="c-date">${it.date}</span></div>
+    <div class="c-title" style="${isRead?'color:var(--muted)':''}">${it.title}</div>
+    <div class="c-sum">${it.summary}</div>
+    ${it.insight?`<div class="c-insight"><b>深度解读</b> · ${it.insight}</div>`:''}
+    ${(it.cases&&it.cases.length)?`<div class="c-cases">${it.cases.map(c=>`<div class="c-case"><b>${c.n||''}</b> ${c.d||''}<span class="src">出处：${c.src||''}</span></div>`).join('')}</div>`:''}
+    ${it.method?`<div class="c-method"><b>本周可执行</b> · ${it.method}</div>`:''}
+    <div class="c-foot">${tags}${mins}
+      <div class="c-act"><button class="act ${isRead?'on':''}" data-act="read" data-id="${it.id}" title="标记已读"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></button></div>
+    </div></div>`;
+}
+function renderCog(){
+  const d=COG.data||SEED; const deep=d.deep||[], news=d.news||[];
+  let html=`<div class="grp-head">资讯·信息差<span class="grp-n">${news.length}</span></div>`;
+  html+=news.map(cogCard).join('');
+  html+=`<div class="grp-head" style="margin-top:20px">深读·认知差<span class="grp-n">${deep.length}</span></div>`+deep.map(cogCard).join('');
+  view.innerHTML=html||'<div class="empty">暂时还没有内容，下拉刷新试试。</div>';
+}
+function renderStat(){
+  const total=cogItems().length||1, readTotal=READ.size;
+  const idx=Math.min(100,Math.round(readTotal/total*100));
+  const R=34,C=2*Math.PI*R,off=C*(1-idx/100);
+  document.getElementById('gaugeBox').innerHTML=`<svg width="92" height="92" viewBox="0 0 92 92">
+    <circle cx="46" cy="46" r="${R}" stroke="var(--border)" stroke-width="9" fill="none"/>
+    <circle cx="46" cy="46" r="${R}" stroke="url(#g)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 46 46)"/>
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#0ea5a4"/></linearGradient></defs>
+    <text x="46" y="44" text-anchor="middle" font-size="20" font-weight="800" fill="var(--text)">${idx}</text>
+    <text x="46" y="60" text-anchor="middle" font-size="10" fill="var(--muted)">已读指数</text></svg>
+  <div style="font-size:13px;color:var(--muted);line-height:1.7">已读 <b style="color:var(--text)">${readTotal}</b> / ${total} 篇<br><span style="font-size:12px">读完越多，信息差越小 ↑</span></div>`;
+}
+function setUpdateTime(){
+  const q=COG.data&&COG.data.quote;
+  const d=(q&&q.updatedAt)?q.updatedAt:(q?q.date:'');
+  const a=document.getElementById('updateTime'),b=document.getElementById('updateTimeMob');
+  if(a)a.textContent=d?(' · 更新于 '+d):'';
+  if(b)b.textContent=d?('更新于 '+d):'';
+}
+
+/* ===== 渲染：财经简报（工作台风格） ===== */
+const FIN_DKEY='wb_fin_density';
+const STAR_F='<svg class="st" viewBox="0 0 24 24"><path d="M12 2.5l2.95 5.98 6.6.96-4.77 4.65 1.13 6.57L12 17.55 6.09 20.66l1.13-6.57L2.45 9.44l6.6-.96z" fill="#f0a824"/></svg>';
+const STAR_E='<svg class="st" viewBox="0 0 24 24"><path d="M12 2.5l2.95 5.98 6.6.96-4.77 4.65 1.13 6.57L12 17.55 6.09 20.66l1.13-6.57L2.45 9.44l6.6-.96z" fill="none" stroke="#3a4a6e" stroke-width="1.6"/></svg>';
+function stars(n){let s='';for(let i=1;i<=3;i++)s+= i<=n?STAR_F:STAR_E;return s;}
+function finSentClass(s){ return s==="利好"?"s-up":s==="利空"?"s-down":"s-flat"; }
+function arrow(d){
+  if(d===1) return '<svg class="ar" viewBox="0 0 10 10" style="width:7px;height:7px"><path d="M5 1 L9 8 L1 8 Z" fill="#ff6b5e"/></svg>';
+  if(d===-1) return '<svg class="ar" viewBox="0 0 10 10" style="width:7px;height:7px"><path d="M5 9 L1 2 L9 2 Z" fill="#26c281"/></svg>';
+  return '<svg class="ar" viewBox="0 0 10 10" style="width:7px;height:7px"><path d="M1 5h8" stroke="#7d8798" stroke-width="1.6"/></svg>';
+}
+function finChips(it){
+  const sc=`<span class="fin-chip ${finSentClass(it.sent)}">${it.sent}</span>`;
+  const kw=(it.kw||[]).map(k=>'<span class="fin-chip">'+k+'</span>').join('');
+  return sc+kw;
+}
+function finItemHTML(it){
+  return `<article class="fin-item">
+    <div class="row1"><span class="cat">${it.cat}</span><span class="stars">${stars(it.prio)}</span></div>
+    <h3>${it.title}</h3>
+    <p>${it.sum}</p>
+    <div class="kw">${finChips(it)}</div>
+    <div class="meta"><span class="src">${it.src}</span><span>${it.time}</span></div>
+  </article>`;
+}
+function finAdviceHTML(it,kind){
+  const tag=kind==="oppo"?"机会":"风险";
+  const kw=(it.kw||[]).map(k=>'<span class="fin-chip">'+k+'</span>').join('');
+  return `<div class="fin-advice ${kind}">
+    <div class="row1"><span class="tag">${tag}</span></div>
+    <h3>${it.title}</h3>
+    <p>${it.sum}</p>
+    <div class="kw">${kw}</div>
+    <div class="meta">来源：${it.src}</div>
+  </div>`;
+}
+function renderFinMarket(tk){
+  let groups=[],cur=null;
+  (tk||[]).forEach(t=>{ if(t.g){cur={name:t.g,color:t.c,items:[]};groups.push(cur);} else if(cur) cur.items.push(t); });
+  const html=groups.map((g,gi)=>{
+    const open=gi===0?"open":"";
+    const cards=g.items.map(t=>{
+      const cls=t.flat?'flat':(t.d===1?'up':(t.d===-1?'down':'flat'));
+      const val=t.v?`<span class="vl">${t.v}</span>`:'';
+      const ch=t.flat?`<span class="ch ${cls}">${t.c}</span>`:`<span class="ch ${cls}">${arrow(t.d)}${t.c}</span>`;
+      return `<div class="mkt-card"><span class="nm">${t.nm}</span>${val}${ch}</div>`;
+    }).join('');
+    const gridCls=g.items.length===4?"mkt-grid cols2":"mkt-grid";
+    return `<div class="mkt-grp ${open}"><div class="mkt-hd"><span class="bar" style="background:${g.color}"></span><span class="t">${g.name}</span><span class="ar"></span></div><div class="mkt-bd"><div class="${gridCls}">${cards}</div></div></div>`;
+  }).join('');
+  const m=document.getElementById('finMkt');
+  m.innerHTML=html||'<span class="fin-note" style="padding:10px 12px">行情暂不可用</span>';
+  m.querySelectorAll('.mkt-hd').forEach(hd=>hd.onclick=()=>hd.parentElement.classList.toggle('open'));
+}
+function bindFinSectionFold(){
+  document.querySelectorAll('#mod-fin .fin-sec-h').forEach(h=>{
+    h.onclick=()=>h.parentElement.classList.toggle('collapsed');
+  });
+}
+function renderFin(){
+  const d=FIN.data||SEED_FIN;
+  renderFinMarket(d.ticker);
+  const news=(d.news||[]).slice().sort((a,b)=>(b.prio||1)-(a.prio||1));
+  document.getElementById('finLeadCnt').textContent=news.length;
+  document.getElementById('finLead').innerHTML = news.length ? ('<div class="fin-feed">'+news.map((it,idx)=>{
+    if((it.prio||1)===3){
+      return `<div class="lead-item"><span class="rk">${idx+1}</span>
+        <div class="row1"><span class="cat">${it.cat||''}</span><span class="stars">${stars(3)}</span></div>
+        <h3>${it.title}</h3><p>${it.sum}</p></div>`;
+    }
+    return finItemHTML(it);
+  }).join('')+'</div>') : '<div class="empty">暂无资讯</div>';
+  const oppo=d.opportunities||[], risk=d.risks||[];
+  document.getElementById('finOpCnt').textContent=oppo.length;
+  document.getElementById('finOppo').innerHTML=oppo.length?('<div class="fin-lead">'+oppo.map(it=>finAdviceHTML(it,'oppo')).join('')+'</div>'):'<div class="empty">暂无机会</div>';
+  document.getElementById('finRkCnt').textContent=risk.length;
+  document.getElementById('finRisk').innerHTML=risk.length?('<div class="fin-lead">'+risk.map(it=>finAdviceHTML(it,'risk')).join('')+'</div>'):'<div class="empty">暂无风险</div>';
+  document.getElementById('finNote').textContent='财经简报数据日期：'+ (d.date||'—') + '（由 fin.json 提供）';
+}
+function setFinDensity(d){
+  const mod=document.getElementById('mod-fin');
+  mod.classList.toggle('comfy',d==='comfy');
+  document.getElementById('densBtn').classList.toggle('on',d==='comfy');
+  try{localStorage.setItem(FIN_DKEY,d);}catch(e){}
+}
+document.getElementById('densBtn').onclick=()=>{
+  const cur=document.getElementById('mod-fin').classList.contains('comfy')?'comfy':'compact';
+  setFinDensity(cur==='comfy'?'compact':'comfy');
+};
+function finExport(){
+  const d=FIN.data||SEED_FIN;
+  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='财经简报_'+(d.date||'data')+'.json';a.click();URL.revokeObjectURL(a.href);
+  toast('已导出 '+((d.news||[]).length)+' 条资讯');
+}
+document.getElementById('finExpBtn').onclick=finExport;
+document.getElementById('finImpBtn').onclick=()=>document.getElementById('finFileIn').click();
+document.getElementById('finFileIn').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      const news=(d&&Array.isArray(d.news))?d.news:null;
+      if(!news||!news.length){toast('文件无有效资讯数据');return;}
+      FIN.data=d;renderFin();toast('导入成功，共 '+news.length+' 条');
+    }catch(err){toast('解析失败：文件格式不正确');}
+  };
+  rd.readAsText(f);e.target.value='';
+};
+
+/* ===== 模块切换 ===== */
+function setModule(m){
+  currentMod=m;
+  try{ localStorage.setItem('wb_info_mod',m); }catch(e){}
+  document.querySelectorAll('.switch button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  document.getElementById('mod-cog').classList.toggle('on',m==='cog');
+  document.getElementById('mod-fin').classList.toggle('on',m==='fin');
+}
+document.querySelectorAll('.switch button').forEach(b=>b.onclick=()=>setModule(b.dataset.m));
+
+/* ===== 状态条 ===== */
+function updateStatus(){
+  const el=document.getElementById('statusStrip'),txt=document.getElementById('statusTxt');
+  if(!el||!txt)return;
+  el.classList.toggle('off',!COG.online);
+  txt.textContent=COG.online?'已连接':'离线模式 · 显示已缓存内容';
+}
+
+/* ===== 刷新（按当前模块） ===== */
+async function doRefresh(){
+  document.getElementById('ptr').classList.add('busy');
+  if(currentMod==='cog'){
+    const r=await fetchCog(true); COG.data=r.data; COG.online=navigator.onLine;
+    renderCog(); renderStat(); setUpdateTime(); updateStatus();
+    toast(r.src==='live'?'认知简讯已更新':(r.src==='cache'?'已读取本地缓存':'示例数据（无网络/无数据源）'));
+  }else{
+    const r=await fetchFin(true); FIN.data=r.data;
+    renderFin();
+    toast(r.src==='live'?'财经简报已更新':(r.src==='cache'?'已读取本地缓存':'fin.json 暂不可用'));
+  }
+  document.getElementById('ptr').classList.remove('busy');
+}
+document.getElementById('refreshBtn').onclick=doRefresh;
+
+/* ===== 模块容器滚动/下拉刷新 ===== */
+document.querySelectorAll('.mod').forEach(m=>{
+  let startY=0,pull=0,pulling=false;
+  m.addEventListener('touchstart',e=>{ if(m.scrollTop<=0){ startY=e.touches[0].clientY; pulling=true; } },{passive:true});
+  m.addEventListener('touchmove',e=>{ if(!pulling)return; const dy=e.touches[0].clientY-startY; if(dy>0&&m.scrollTop<=0){ pull=Math.min(dy*0.5,80); document.getElementById('ptr').style.height=pull+'px'; } },{passive:true});
+  m.addEventListener('touchend',()=>{ if(!pulling)return; pulling=false; if(pull>56) doRefresh(); document.getElementById('ptr').style.height='0'; pull=0; });
+});
+
+/* ===== 已读交互（仅认知简讯） ===== */
+function toggleRead(id){ if(READ.has(id)) READ.delete(id); else READ.add(id); saveRead(); renderCog(); renderStat(); }
+view.addEventListener('click',e=>{ const btn=e.target.closest('[data-act]'); if(btn){ e.stopPropagation(); if(btn.dataset.act==='read') toggleRead(btn.dataset.id); } });
+
+/* ===== 设置抽屉 ===== */
+const drawer=document.getElementById('drawer'),mask=document.getElementById('mask');
+function openDrawer(){ drawer.classList.add('show'); mask.classList.add('show'); document.getElementById('dataUrl').value=(settings().dataUrl||''); renderStat(); }
+function closeDrawer(){ drawer.classList.remove('show'); mask.classList.remove('show'); }
+document.getElementById('setBtn').onclick=openDrawer;
+document.getElementById('drawerClose').onclick=closeDrawer;
+mask.onclick=closeDrawer;
+document.getElementById('saveUrl').onclick=()=>{ const s=settings(); s.dataUrl=document.getElementById('dataUrl').value.trim(); saveSettings(s); toast('已保存，正在刷新'); setModule('cog'); doRefresh(); closeDrawer(); };
+
+/* ===== toast / 在线 ===== */
+let toastT;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+window.addEventListener('online',()=>{ COG.online=true; updateStatus(); doRefresh(); });
+window.addEventListener('offline',()=>{ COG.online=false; updateStatus(); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(currentMod==='cog'&&Date.now()-COG.lastFetch>300000) doRefresh(); else if(currentMod==='fin'&&Date.now()-FIN.lastFetch>300000) doRefresh(); } });
+
+/* ===== 启动 ===== */
+load();
+renderQuote();
+bindFinSectionFold();
+COG.online=navigator.onLine; updateStatus();
+let savedMod='cog'; try{ savedMod=localStorage.getItem('wb_info_mod')||'cog'; }catch(e){}
+if(savedMod!=='cog'&&savedMod!=='fin') savedMod='cog';
+if(savedMod!=='cog') setModule(savedMod);
+let savedFinDensity='compact'; try{ savedFinDensity=localStorage.getItem(FIN_DKEY)||'compact'; }catch(e){}
+if(savedFinDensity!=='compact'&&savedFinDensity!=='comfy') savedFinDensity='compact';
+if(savedFinDensity==='comfy') setFinDensity('comfy');
+fetchCog(false).then(r=>{ COG.data=r.data; COG.lastFetch=(r.src==='live'||r.src==='cache')?Number(localStorage.getItem(K.cacheTime)||Date.now()):0; renderCog(); renderStat(); setUpdateTime(); });
+fetchFin(false).then(r=>{ FIN.data=r.data; FIN.lastFetch=(r.src==='live'||r.src==='cache')?Number(localStorage.getItem(K.finTime)||Date.now()):0; renderFin(); });
+</script>
+</body>
+</html>
