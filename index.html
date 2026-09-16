@@ -411,17 +411,17 @@ function saveRead(){ localStorage.setItem(K.read, JSON.stringify([...READ])); }
 function settings(){ try{ return JSON.parse(localStorage.getItem(K.settings)||'{}'); }catch(e){ return {}; } }
 function saveSettings(s){ localStorage.setItem(K.settings, JSON.stringify(s)); }
 
-/* ===== 数据源：GitHub raw 优先，同目录文件兜底（零重部署架构）===== */
-const REMOTE_BASE='https://raw.githubusercontent.com/chen6808hong/deep-news/main/';
+/* ===== 数据源：国内可达镜像(jsDelivr)优先，raw.githubusercontent 与同目录文件兜底（零重部署架构）===== */
+const REMOTE_BASE='https://cdn.jsdelivr.net/gh/chen6808hong/deep-news@main/';
+const REMOTE_RAW='https://raw.githubusercontent.com/chen6808hong/deep-news/main/';
 
 /* ===== 认知简讯数据层 ===== */
 async function fetchCog(force){
   const st=settings();
-  const remoteUrl=(st.dataUrl&&st.dataUrl.trim())||(REMOTE_BASE+'data.json');
-  const localUrl='./data.json';
   const cached=localStorage.getItem(K.cache), cacheTime=localStorage.getItem(K.cacheTime);
   const seen=new Set();
-  const tryList=[remoteUrl,localUrl].filter(u=>{ if(seen.has(u)) return false; seen.add(u); return true; });
+  const tryList=[(st.dataUrl&&st.dataUrl.trim()),REMOTE_BASE+'data.json',REMOTE_RAW+'data.json','./data.json']
+    .filter(u=>{ if(!u||seen.has(u)) return false; seen.add(u); return true; });
   for(const url of tryList){
     try{
       const res=await fetch(url,{cache:'no-store',headers:{'Accept':'application/json'}});
@@ -439,7 +439,7 @@ async function fetchCog(force){
 async function fetchFin(force){
   const st=settings();
   const seen=new Set();
-  const tryList=[(st.finUrl&&st.finUrl.trim()),REMOTE_BASE+'fin.json','./fin.json']
+  const tryList=[(st.finUrl&&st.finUrl.trim()),REMOTE_BASE+'fin.json',REMOTE_RAW+'fin.json','./fin.json']
     .filter(u=>{ if(!u||seen.has(u)) return false; seen.add(u); return true; });
   for(const url of tryList){
     try{
